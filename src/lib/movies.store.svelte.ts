@@ -83,6 +83,35 @@ export const moviesStore = {
     }
   },
 
+  // Puntuar película con actualización optimista
+  async rateMovie(movie: Movie, rating: number): Promise<boolean> {
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+      error = 'Rating inválido. Debe ser un número entre 0 y 5';
+      return false;
+    }
+
+    mutating = true;
+    error = null;
+
+    const previousRating = movie.rating;
+    movie.rating = rating;
+    movies = movies.map(m => m.id === movie.id ? { ...m, rating } : m);
+
+    try {
+      const updatedMovie = await api.rateMovie(movie.id, rating);
+      movies = movies.map(m => m.id === movie.id ? updatedMovie : m);
+      Object.assign(movie, updatedMovie);
+      return true;
+    } catch (err) {
+      movie.rating = previousRating;
+      movies = movies.map(m => m.id === movie.id ? { ...m, rating: previousRating } : m);
+      error = err instanceof Error ? err.message : 'Error al puntuar película';
+      return false;
+    } finally {
+      mutating = false;
+    }
+  },
+
   // Limpiar estado completo
   reset() {
     movies = [];

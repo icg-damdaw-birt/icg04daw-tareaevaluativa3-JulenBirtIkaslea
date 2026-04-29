@@ -6,13 +6,17 @@
     movie,
     showActions = true,
     ondelete,
-    onedit
+    onedit,
+    onrate
   }: {
     movie: Movie;
     showActions?: boolean;
     ondelete?: (id: string) => void;
     onedit?: (movie: Movie) => void;
+    onrate?: (movie: Movie, rating: number) => void;
   } = $props();
+
+  const ratingValues = [1, 2, 3, 4, 5];
 
   // Handlers: ejecutan callbacks del padre directamente
   function handleDelete() {
@@ -50,6 +54,22 @@
     </div>
 
     {#if showActions}
+      <div class="flex items-center gap-1" aria-label={`Puntuación: ${movie.rating ?? 0} de 5`}>
+        {#each ratingValues as rating}
+          <button
+            type="button"
+            class={`text-2xl leading-none transition hover:scale-110 ${
+              rating <= (movie.rating ?? 0) ? 'text-yellow-400' : 'text-slate-300'
+            }`}
+            onclick={() => onrate?.(movie, rating)}
+            aria-label={`Puntuar con ${rating} de 5`}
+            aria-pressed={rating === (movie.rating ?? 0)}
+          >
+            {rating <= (movie.rating ?? 0) ? '★' : '☆'}
+          </button>
+        {/each}
+      </div>
+
       <div class="mt-3 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"

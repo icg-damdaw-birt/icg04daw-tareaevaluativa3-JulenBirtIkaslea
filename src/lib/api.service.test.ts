@@ -289,6 +289,71 @@ describe('API Service - Autenticación', () => {
       }
     });
   });
+
+  // ==========================================
+  // GRUPO: Rating
+  // ==========================================
+  describe('Rating', () => {
+    it('deberÃ­a puntuar una pelÃ­cula con el endpoint correcto', async () => {
+      // ARRANGE
+      const token = 'valid-token';
+      const updatedMovie = {
+        id: 'movie-1',
+        title: 'Inception',
+        director: 'Christopher Nolan',
+        year: 2010,
+        rating: 4,
+      };
+
+      authToken.set(token);
+      (globalThis.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'application/json' : null
+        },
+        json: async () => updatedMovie
+      });
+
+      // ACT
+      const response = await api.rateMovie('movie-1', 4);
+
+      // ASSERT
+      expect(response).toEqual(updatedMovie);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+      const callArgs = (globalThis.fetch as any).mock.calls[0];
+      expect(callArgs[0]).toBe('http://localhost:3000/api/movies/movie-1/rating');
+      expect(callArgs[1].method).toBe('PATCH');
+      expect(callArgs[1].body).toBe(JSON.stringify({ rating: 4 }));
+
+      const headers = callArgs[1].headers as Headers;
+      expect(headers.get('Authorization')).toBe(`Bearer ${token}`);
+      expect(headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('deberÃ­a propagar errores de validaciÃ³n del backend', async () => {
+      // ARRANGE
+      (globalThis.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'application/json' : null
+        },
+        json: async () => ({ error: 'Rating invÃ¡lido. Debe ser un nÃºmero entre 0 y 5' })
+      });
+
+      // ACT & ASSERT
+      try {
+        await api.rateMovie('movie-1', 6);
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).status).toBe(400);
+        expect((error as ApiError).message).toBe('Rating invÃ¡lido. Debe ser un nÃºmero entre 0 y 5');
+      }
+    });
+  });
 });
 
 /**
