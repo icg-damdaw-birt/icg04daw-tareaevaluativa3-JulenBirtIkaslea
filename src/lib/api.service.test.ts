@@ -289,6 +289,71 @@ describe('API Service - Autenticación', () => {
       }
     });
   });
+
+  // ==========================================
+  // GRUPO: Favoritos
+  // ==========================================
+  describe('Favoritos', () => {
+    it('deberÃ­a alternar favorito con el endpoint correcto', async () => {
+      // ARRANGE
+      const token = 'valid-token';
+      const updatedMovie = {
+        id: 'movie-1',
+        title: 'Inception',
+        director: 'Christopher Nolan',
+        year: 2010,
+        posterUrl: 'https://example.com/inception.jpg',
+        isFavorite: true,
+      };
+
+      authToken.set(token);
+      (globalThis.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'application/json' : null
+        },
+        json: async () => updatedMovie
+      });
+
+      // ACT
+      const response = await api.toggleFavorite('movie-1');
+
+      // ASSERT
+      expect(response).toEqual(updatedMovie);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+      const callArgs = (globalThis.fetch as any).mock.calls[0];
+      expect(callArgs[0]).toBe('http://localhost:3000/api/movies/movie-1/favorite');
+      expect(callArgs[1].method).toBe('PATCH');
+      expect(callArgs[1].body).toBeUndefined();
+
+      const headers = callArgs[1].headers as Headers;
+      expect(headers.get('Authorization')).toBe(`Bearer ${token}`);
+    });
+
+    it('deberÃ­a propagar 404 si la pelÃ­cula no existe', async () => {
+      // ARRANGE
+      (globalThis.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'application/json' : null
+        },
+        json: async () => ({ error: 'PelÃ­cula no encontrada' })
+      });
+
+      // ACT & ASSERT
+      try {
+        await api.toggleFavorite('no-existe');
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).status).toBe(404);
+        expect((error as ApiError).message).toBe('PelÃ­cula no encontrada');
+      }
+    });
+  });
 });
 
 /**

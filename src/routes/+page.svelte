@@ -75,6 +75,17 @@
     }
   }
 
+  // Alterna el estado favorito de una película.
+  async function handleToggleFavorite(id: string) {
+    feedbackMessage = null;
+    moviesStore.clearError();
+
+    const ok = await moviesStore.toggleFavorite(id);
+    if (ok) {
+      feedbackMessage = { type: 'info', text: 'Favoritos actualizados.' };
+    }
+  }
+
   // Abre el modo edición con los datos de la tarjeta seleccionada.
   function handleEdit(movie: Movie) {
     editingMovie = movie;
@@ -119,7 +130,12 @@
       {:else}
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {#each moviesStore.movies as movie (movie.id)}
-            <MovieCard {movie} ondelete={handleDelete} onedit={handleEdit} />
+            <MovieCard
+              {movie}
+              ondelete={handleDelete}
+              onedit={handleEdit}
+              onfavorite={handleToggleFavorite}
+            />
           {/each}
         </div>
       {/if}

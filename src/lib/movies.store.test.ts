@@ -17,6 +17,7 @@ vi.mock('./api.service', () => ({
     createMovie: vi.fn(),
     updateMovie: vi.fn(),
     deleteMovie: vi.fn(),
+    toggleFavorite: vi.fn(),
   }
 }));
 
@@ -39,9 +40,9 @@ import type { Movie, MoviePayload } from './types';
 
 // ── Datos de prueba ──────────────────────────────────────────────
 const mockMovies: Movie[] = [
-  { id: '1', title: 'Inception', director: 'Christopher Nolan', year: 2010 },
-  { id: '2', title: 'The Matrix', director: 'Wachowski Sisters', year: 1999 },
-  { id: '3', title: 'Pulp Fiction', director: 'Quentin Tarantino', year: 1994 },
+  { id: '1', title: 'Inception', director: 'Christopher Nolan', year: 2010, isFavorite: false },
+  { id: '2', title: 'The Matrix', director: 'Wachowski Sisters', year: 1999, isFavorite: true },
+  { id: '3', title: 'Pulp Fiction', director: 'Quentin Tarantino', year: 1994, isFavorite: false },
 ];
 
 const newPayload: MoviePayload = {
@@ -218,6 +219,55 @@ describe('Movies Store (Svelte 5 Runes)', () => {
 
       expect(ok).toBe(false);
       expect(moviesStore.error).toBe('Forbidden');
+      expect(moviesStore.mutating).toBe(false);
+    });
+  });
+
+  // â”€â”€â”€ toggleFavorite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  describe('toggleFavorite()', () => {
+    it('deberÃ­a alternar favorito y actualizar la pelÃ­cula en el store', async () => {
+      // ARRANGE
+      vi.mocked(api.getMovies).mockResolvedValue([...mockMovies]);
+      await moviesStore.loadMovies();
+
+      const favoriteMovie: Movie = { ...mockMovies[0], isFavorite: true };
+      vi.mocked(api.toggleFavorite).mockResolvedValue(favoriteMovie);
+
+      // ACT
+      const ok = await moviesStore.toggleFavorite('1');
+
+      // ASSERT
+      expect(api.toggleFavorite).toHaveBeenCalledWith('1');
+      expect(ok).toBe(true);
+      expect(moviesStore.movies.find(m => m.id === '1')?.isFavorite).toBe(true);
+    });
+
+    it('no deberÃ­a cambiar el nÃºmero de pelÃ­culas al alternar favorito', async () => {
+      // ARRANGE
+      vi.mocked(api.getMovies).mockResolvedValue([...mockMovies]);
+      await moviesStore.loadMovies();
+      const initialCount = moviesStore.movies.length;
+
+      vi.mocked(api.toggleFavorite).mockResolvedValue({ ...mockMovies[1], isFavorite: false });
+
+      // ACT
+      await moviesStore.toggleFavorite('2');
+
+      // ASSERT
+      expect(moviesStore.movies.length).toBe(initialCount);
+      expect(moviesStore.movies.find(m => m.id === '2')?.isFavorite).toBe(false);
+    });
+
+    it('deberÃ­a manejar error al alternar favorito', async () => {
+      // ARRANGE
+      vi.mocked(api.toggleFavorite).mockRejectedValue(new Error('PelÃ­cula no encontrada'));
+
+      // ACT
+      const ok = await moviesStore.toggleFavorite('999');
+
+      // ASSERT
+      expect(ok).toBe(false);
+      expect(moviesStore.error).toBe('PelÃ­cula no encontrada');
       expect(moviesStore.mutating).toBe(false);
     });
   });
