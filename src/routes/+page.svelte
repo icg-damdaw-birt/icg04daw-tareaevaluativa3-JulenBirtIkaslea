@@ -75,6 +75,14 @@
     }
   }
 
+  // Actualiza la puntuación seleccionada en la tarjeta.
+  async function handleRate(movie: Movie, rating: number) {
+    feedbackMessage = null;
+    moviesStore.clearError();
+
+    await moviesStore.rateMovie(movie, rating);
+  }
+
   // Abre el modo edición con los datos de la tarjeta seleccionada.
   function handleEdit(movie: Movie) {
     editingMovie = movie;
@@ -119,7 +127,7 @@
       {:else}
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {#each moviesStore.movies as movie (movie.id)}
-            <MovieCard {movie} ondelete={handleDelete} onedit={handleEdit} />
+            <MovieCard {movie} ondelete={handleDelete} onedit={handleEdit} onrate={handleRate} />
           {/each}
         </div>
       {/if}

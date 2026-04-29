@@ -17,6 +17,7 @@ vi.mock('./api.service', () => ({
     createMovie: vi.fn(),
     updateMovie: vi.fn(),
     deleteMovie: vi.fn(),
+    rateMovie: vi.fn(),
   }
 }));
 
@@ -39,9 +40,9 @@ import type { Movie, MoviePayload } from './types';
 
 // ── Datos de prueba ──────────────────────────────────────────────
 const mockMovies: Movie[] = [
-  { id: '1', title: 'Inception', director: 'Christopher Nolan', year: 2010 },
-  { id: '2', title: 'The Matrix', director: 'Wachowski Sisters', year: 1999 },
-  { id: '3', title: 'Pulp Fiction', director: 'Quentin Tarantino', year: 1994 },
+  { id: '1', title: 'Inception', director: 'Christopher Nolan', year: 2010, rating: 0 },
+  { id: '2', title: 'The Matrix', director: 'Wachowski Sisters', year: 1999, rating: 3 },
+  { id: '3', title: 'Pulp Fiction', director: 'Quentin Tarantino', year: 1994, rating: 5 },
 ];
 
 const newPayload: MoviePayload = {
@@ -218,6 +219,63 @@ describe('Movies Store (Svelte 5 Runes)', () => {
 
       expect(ok).toBe(false);
       expect(moviesStore.error).toBe('Forbidden');
+      expect(moviesStore.mutating).toBe(false);
+    });
+  });
+
+  // â”€â”€â”€ rateMovie â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  describe('rateMovie', () => {
+    it('deberÃ­a puntuar una pelÃ­cula y actualizar el store', async () => {
+      // ARRANGE
+      vi.mocked(api.getMovies).mockResolvedValue([{ ...mockMovies[0], rating: 0 }]);
+      await moviesStore.loadMovies();
+
+      const movie = moviesStore.movies[0];
+      const updatedMovie: Movie = { ...movie, rating: 4 };
+      vi.mocked(api.rateMovie).mockResolvedValue(updatedMovie);
+
+      // ACT
+      const ok = await moviesStore.rateMovie(movie, 4);
+
+      // ASSERT
+      expect(ok).toBe(true);
+      expect(api.rateMovie).toHaveBeenCalledWith('1', 4);
+      expect(moviesStore.movies[0].rating).toBe(4);
+    });
+
+    it('deberÃ­a rechazar ratings fuera de rango sin llamar a la API', async () => {
+      // ARRANGE
+      vi.mocked(api.getMovies).mockResolvedValue([{ ...mockMovies[0], rating: 0 }]);
+      await moviesStore.loadMovies();
+
+      const movie = moviesStore.movies[0];
+
+      // ACT
+      const ok = await moviesStore.rateMovie(movie, 6);
+
+      // ASSERT
+      expect(ok).toBe(false);
+      expect(api.rateMovie).not.toHaveBeenCalled();
+      expect(moviesStore.error).toBe('Rating inválido. Debe ser un número entre 0 y 5');
+      expect(moviesStore.movies[0].rating).toBe(0);
+    });
+
+    it('deberÃ­a revertir el rating si la API falla', async () => {
+      // ARRANGE
+      vi.mocked(api.getMovies).mockResolvedValue([{ ...mockMovies[1], rating: 3 }]);
+      await moviesStore.loadMovies();
+
+      const movie = moviesStore.movies[0];
+      vi.mocked(api.rateMovie).mockRejectedValue(new Error('No se pudo actualizar la pelÃ­cula'));
+
+      // ACT
+      const ok = await moviesStore.rateMovie(movie, 4);
+
+      // ASSERT
+      expect(ok).toBe(false);
+      expect(api.rateMovie).toHaveBeenCalledWith('2', 4);
+      expect(moviesStore.movies[0].rating).toBe(3);
+      expect(moviesStore.error).toBe('No se pudo actualizar la pelÃ­cula');
       expect(moviesStore.mutating).toBe(false);
     });
   });
